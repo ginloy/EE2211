@@ -14,7 +14,7 @@ def poly_reg(x: np.ndarray, y: np.ndarray, order: int, plot: bool = False) -> np
     model = np.poly1d(temp)
     if not plot:
         return model
-    points = np.arange(np.min(x) - 1, np.max(x) + 1, 0.5)
+    points = np.linspace(np.min(x) - 1, np.max(x) + 1, 100)
     res = model(points)
     plt.scatter(x, y)
     plt.plot(points, res)
@@ -29,6 +29,6 @@ def one_hot_encode(categories: np.ndarray) -> np.ndarray:
 
 
 
-x = np.array([-10, -8, -3, -1, 2, 8])
-y = np.array([1, 1, 2, 1, 1, 2, 0, 1, 3, 0, 0])
-print(one_hot_encode(y))
+# x = np.array([-10, -8, -3, -1, 2, 8])
+# y = np.array([1, 1, 2, 1, 1, 2, 0, 1, 3, 0, 0])
+# print(one_hot_encode(y))
