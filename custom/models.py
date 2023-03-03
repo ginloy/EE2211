@@ -1,18 +1,19 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Ridge, LinearRegression
 from sklearn.preprocessing import PolynomialFeatures, OneHotEncoder
 
 
 class PolyModel:
-    def __init__(self, x_train: np.ndarray, y_train: np.ndarray, degree: int, bias: bool = True):
+    def __init__(self, x_train: np.ndarray, y_train: np.ndarray, degree: int, bias: bool = True, ridge: float = 0.0):
         self.__x_train = x_train
         self.__y_train = y_train
         self.__transformer: PolynomialFeatures = PolynomialFeatures(degree, include_bias=bias)
+        self.__linear_model: Ridge = \
+            LinearRegression(fit_intercept=False) if abs(ridge) < 1e-10 else Ridge(ridge, fit_intercept=False)
         x_prepped = self.__transformer.fit_transform(self.__x_train)
-        self.__weights = np.linalg.lstsq(x_prepped, self.__y_train, rcond=None)[0]
+        self.__linear_model.fit(x_prepped, y_train)
 
     def predict(self, x_test: np.ndarray) -> np.ndarray:
         if x_test.ndim != self.__x_train.ndim:
@@ -20,18 +21,11 @@ class PolyModel:
         if x_test.shape[-1] != self.__x_train.shape[-1]:
             raise ValueError("Test data has different number of columns as training data!")
         x_prepped = self.__transformer.transform(x_test)
-        y_test = x_prepped @ self.__weights
+        y_test = self.__linear_model.predict(x_prepped)
         return y_test
 
     def coefficients(self) -> np.ndarray:
-        if self.__transformer.get_params()["include_bias"]:
-            return self.__weights[1:, :]
-        return self.__weights
-
-    def intercept(self) -> np.ndarray:
-        if self.__transformer.get_params()["include_bias"]:
-            return self.__weights[0, :]
-        return np.zeros(self.__weights[0].shape)
+        return self.__linear_model.coef_
 
     def plot(self, x: np.ndarray = None, y: np.ndarray = None):
         if x is None or y is None:
@@ -50,12 +44,12 @@ class PolyModel:
 
 
 class ClassificationModel:
-    def __init__(self, x_train: np.ndarray, y_train: np.ndarray, power: int,  bias: bool = True):
+    def __init__(self, x_train: np.ndarray, y_train: np.ndarray, power: int, bias: bool = True, ridge: float = 0.0):
         self.__x_train = x_train
         self.__y_train = y_train
         self.__encoder = OneHotEncoder(sparse_output=False)
         y_transformed = self.__encoder.fit_transform(y_train)
-        self.__poly_model = PolyModel(x_train, y_transformed, power, bias=bias)
+        self.__poly_model = PolyModel(x_train, y_transformed, power, bias=bias, ridge=ridge)
 
     def predict(self, x_test: np.ndarray) -> np.ndarray:
         raw = self.__poly_model.predict(x_test)
@@ -63,9 +57,6 @@ class ClassificationModel:
 
     def coefficients(self) -> np.ndarray:
         return self.__poly_model.coefficients()
-
-    def intercept(self) -> np.ndarray:
-        return self.__poly_model.intercept()
 
     def plot(self, x: np.ndarray, y: np.ndarray = None):
         if y is None:
