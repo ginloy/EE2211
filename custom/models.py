@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import PolynomialFeatures, OneHotEncoder
 
 
@@ -43,6 +45,9 @@ class PolyModel:
         plt.plot(points, result)
         plt.show()
 
+    def transform(self, x: np.ndarray) -> np.ndarray:
+        return self.__transformer.transform(x)
+
 
 class ClassificationModel:
     def __init__(self, x_train: np.ndarray, y_train: np.ndarray, power: int,  bias: bool = True):
@@ -74,6 +79,8 @@ class ClassificationModel:
         pd.plotting.scatter_matrix(df, c=color, marker='o', hist_kwds={"bins": 20})
         plt.show()
 
+    def transform(self, y: np.ndarray) -> np.ndarray:
+        return self.__encoder.transform(y)
 
 #
 # wine_df = pd.read_csv("../T5/winequality-red.csv", sep=";")
@@ -96,6 +103,7 @@ class ClassificationModel:
 # data = load_iris()
 # # %%
 # x_train, x_test, y_train, y_test = train_test_split(data["data"], data["target"].reshape(-1, 1))
-# model = ClassificationModel(x_train, y_train, 5)
-# y_res = model.predict(x_train)
-# print(y_res - y_train.reshape((-1, 1)))
+# model = ClassificationModel(x_train, y_train, 3)
+# y_res = model.predict(x_test)
+# model.plot(x_test)
+# model.plot(x_test, y_test.reshape(-1, 1))
