@@ -22,6 +22,15 @@ def poly_reg(x: np.ndarray, y: np.ndarray, order: int, plot: bool = False) -> np
     return model
 
 
+def pad(x: np.ndarray) -> np.ndarray:
+    """
+    Pads input matrix with a column of ones at the front.
+    :param x: input matrix
+    :return: padded matrix
+    """
+    return np.hstack(np.ones((x.shape[0], 1)), x)
+
+
 def one_hot_encode(categories: np.ndarray) -> np.ndarray:
     encoder = prep.OneHotEncoder()
     return encoder.fit_transform(categories.reshape(-1, 1)).toarray()
@@ -39,7 +48,7 @@ def solve_system(x: np.ndarray, y: np.ndarray, bias=False) -> np.ndarray:
     if len(x.shape) != 2 or len(y.shape) != 2:
         raise ValueError("Arrays are not matrices!")
     if bias:
-        x = np.hstack((np.ones((x.shape[0], 1)), x))
+        x = pad(x)
     coeffs = np.linalg.lstsq(x, y, rcond=None)
     return coeffs[0]
 
