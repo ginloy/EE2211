@@ -28,12 +28,19 @@ def one_hot_encode(categories: np.ndarray) -> np.ndarray:
 
 
 def solve_system(x: np.ndarray, y: np.ndarray, bias=False) -> np.ndarray:
+    """
+    Solves system of equations
+    :param x: (numpy matrix) Input data
+    :param y: (numpy matrix) Target of equation
+    :param bias: Whether to add a bias when doing regression
+    :return: d x 1 numpy matrix of coefficients.
+             If bias was set to true, additional bias coefficient at the top row
+    """
     if len(x.shape) != 2 or len(y.shape) != 2:
         raise ValueError("Arrays are not matrices!")
     if bias:
-        x = np.hstack((x, x[:, :1] ** 0))
+        x = np.hstack((np.ones((x.shape[0], 1)), x))
     coeffs = np.linalg.lstsq(x, y, rcond=None)
     return coeffs[0]
 
 # print(solve_system(np.array([1, 2, 3, 4]).reshape(2, 2), np.array([69, 70]).reshape(-1, 1), bias=True))
-
