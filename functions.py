@@ -1,8 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn import preprocessing as prep
-import typing
 
 
 def poly_reg(x: np.ndarray, y: np.ndarray, order: int, plot: bool = False) -> np.poly1d:
@@ -23,12 +21,19 @@ def poly_reg(x: np.ndarray, y: np.ndarray, order: int, plot: bool = False) -> np
     plt.show()
     return model
 
+
 def one_hot_encode(categories: np.ndarray) -> np.ndarray:
     encoder = prep.OneHotEncoder()
     return encoder.fit_transform(categories.reshape(-1, 1)).toarray()
 
 
+def solve_system(x: np.ndarray, y: np.ndarray, bias=False) -> np.ndarray:
+    if len(x.shape) != 2 or len(y.shape) != 2:
+        raise ValueError("Arrays are not matrices!")
+    if bias:
+        x = np.hstack((x, x[:, :1] ** 0))
+    coeffs = np.linalg.lstsq(x, y, rcond=None)
+    return coeffs[0]
 
-# x = np.array([-10, -8, -3, -1, 2, 8])
-# y = np.array([1, 1, 2, 1, 1, 2, 0, 1, 3, 0, 0])
-# print(one_hot_encode(y))
+# print(solve_system(np.array([1, 2, 3, 4]).reshape(2, 2), np.array([69, 70]).reshape(-1, 1), bias=True))
+
