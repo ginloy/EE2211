@@ -10,8 +10,8 @@ class PolyModel:
         self.__x_train = x_train
         self.__y_train = y_train
         self.__transformer: PolynomialFeatures = PolynomialFeatures(degree, include_bias=bias)
-        self.__linear_model: Ridge = \
-            LinearRegression(fit_intercept=False) if abs(ridge) < 1e-10 else Ridge(ridge, fit_intercept=False)
+        self.__linear_model: LinearRegression = \
+            LinearRegression(fit_intercept=False) if abs(ridge) < 1e-9 else Ridge(ridge, fit_intercept=False)
         x_prepped = self.__transformer.fit_transform(self.__x_train)
         self.__linear_model.fit(x_prepped, y_train)
 
