@@ -6,7 +6,7 @@ from sklearn.preprocessing import PolynomialFeatures, OneHotEncoder
 
 
 class PolyModel:
-    def __init__(self, x_train: np.ndarray, y_train: np.ndarray, degree: int, bias: bool = True, ridge: float = 0.0):
+    def __init__(self, x_train: np.ndarray, y_train: np.ndarray, degree: int, bias=True, ridge=0.0):
         self.__x_train = x_train
         self.__y_train = y_train
         self.__transformer: PolynomialFeatures = PolynomialFeatures(degree, include_bias=bias)
@@ -42,6 +42,10 @@ class PolyModel:
     def transform(self, x: np.ndarray) -> np.ndarray:
         return self.__transformer.transform(x)
 
+    @classmethod
+    def unfitted_transform(cls, x: np.ndarray, power: int, bias=True) -> np.ndarray:
+        return PolynomialFeatures(power, include_bias=bias).fit_transform(x)
+
 
 class ClassificationModel:
     def __init__(self, x_train: np.ndarray, y_train: np.ndarray, power: int, bias: bool = True, ridge: float = 0.0):
@@ -58,11 +62,14 @@ class ClassificationModel:
     def coefficients(self) -> np.ndarray:
         return self.__poly_model.coefficients()
 
+    def categories(self) -> np.ndarray:
+        return self.__encoder.categories_[0]
+
     def plot(self, x: np.ndarray, y: np.ndarray = None):
         if y is None:
             y = self.predict(x)
         mapping = {}
-        for i, category in enumerate(self.__encoder.categories_[0]):
+        for i, category in enumerate(self.categories()):
             mapping[category] = i
         f = lambda cat: mapping[cat]
         color = np.vectorize(f)(y)
@@ -72,6 +79,10 @@ class ClassificationModel:
 
     def transform(self, y: np.ndarray) -> np.ndarray:
         return self.__encoder.transform(y)
+
+    @classmethod
+    def one_hot_encode(cls, y: np.ndarray) -> np.ndarray:
+        return OneHotEncoder(sparse_output=False).fit_transform(y)
 
 #
 # wine_df = pd.read_csv("../T5/winequality-red.csv", sep=";")
