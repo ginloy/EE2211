@@ -11,11 +11,11 @@ class Network(pl.LightningModule):
         super().__init__()
         self.learning_rate = learning_rate
         self.encoder = nn.Sequential(
-            nn.Linear(1, 8),
+            nn.Linear(4, 8),
             nn.LeakyReLU(inplace=True),
             nn.Linear(8, 8),
             nn.LeakyReLU(inplace=True),
-            nn.Linear(8, 1),
+            nn.Linear(8, 3),
         )
 
     def training_step(self, batch, batch_idx):
