@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.datasets import load_iris
+from sklearn.datasets import load_iris, load_digits
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 
@@ -22,6 +22,7 @@ def mse(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 def normalize(data: np.ndarray) -> np.ndarray:
     mean = np.mean(data, axis=0)
     std = np.std(data, axis=0)
+    std[std < 1e-20] = 1
     return (data - mean) / std
 
 
@@ -72,8 +73,19 @@ class LeakyRelu(Layer):
         # return learn_rate * (output_gradient > 0)
 
 
-class Tanh(Layer):
+class Relu(Layer):
+    def __init__(self):
+        self.__input = None
 
+    def forward(self, inp: np.ndarray) -> np.ndarray:
+        self.__input = inp
+        return np.maximum(inp, 0)
+
+    def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
+        output_gradient[self.__input < 0] = 0
+        return output_gradient
+
+class Tanh(Layer):
     def __init__(self):
         self.__input = None
 
@@ -102,36 +114,45 @@ class SoftMax(Layer):
         diag = np.arange(classes)
         jacob_matrix[:, diag, diag] = self.__output
         jacob_matrix -= self.__output[..., None] * self.__output[:, None]
-        return output_gradient @ np.mean(jacob_matrix, axis=0)
+        return (output_gradient[:,None] @ jacob_matrix).squeeze()
 
 
 
 
-data = load_iris()
+data = load_digits()
 encoder = OneHotEncoder(sparse_output=False)
 Y = encoder.fit_transform(data["target"].reshape(-1, 1))
 
-x_train, x_test, y_train, y_test = train_test_split(normalize(data["data"]), Y, test_size=0.8)
+x_train, x_test, y_train, y_test = train_test_split(normalize(data["data"]), Y, test_size=0.4)
+
+# x = np.linspace(-10, 10, 10000).reshape(-1, 1)
+# y = x ** 3 + 2 * x**2 - 4 * x - 3
+
+# x_train = normalize(x)
+# y_train = normalize(y)
+# y_train = y
 
 # y = y / np.max(y)
 data = np.hstack((x_train, y_train))
-batch_size = 1024
+batch_size = 32
 lr = 0.1
 #
-network = [Dense(4, 6), LeakyRelu(),
-           Dense(6, 4), LeakyRelu(),
-           Dense(4, 3), SoftMax()
+network = [Dense(64, 40), Relu(),
+           Dense(40, 30), Relu(),
+           Dense(30, 20), Relu(),
+           Dense(20, 15), Relu(),
+           Dense(15, 10), SoftMax()
            ]
 #
-for epoch in range(50000):
+for epoch in range(500):
     num_batches = 0
     total_error = 0
     np.random.shuffle(data)
     # print(data)
     batches = np.array_split(data, range(batch_size, len(data), batch_size), axis=0)
     for batch in batches:
-        output = batch[:, :4]
-        target = batch[:, 4:]
+        output = batch[:, :64]
+        target = batch[:, 64:]
         # print(np.hstack((output, target)))
         # break
         for layer in network:
@@ -152,6 +173,8 @@ for epoch in range(50000):
 y_pred = x_test
 for layer in network:
     y_pred = layer.forward(y_pred)
+#
+# plt.scatter(x_train, y_pred)
 
 acc = (np.argmax(y_pred, axis=1) == np.argmax(y_test, axis=1)).sum() / len(y_pred)
 print(acc)
