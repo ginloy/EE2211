@@ -1,20 +1,10 @@
-from sklearn.model_selection import train_test_split
-from sklearn.datasets import load_iris
 from abc import abstractmethod
-from sklearn.preprocessing import OneHotEncoder
-from typing import Union
 
 import numpy as np
-# import torch
-# import torch.nn as nn
-# import torch.optim as optim
-# from matplotlib import pyplot as plt
-# import copy
-#
-# from torch.utils.data import DataLoader, TensorDataset
-# from torchmetrics import Accuracy
-
-from custom.models import *
+from matplotlib import pyplot as plt
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
 
 
 def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -24,7 +14,7 @@ def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray,
 
 
 def mse(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    error = np.mean((pred - target) ** 2)
+    error = np.mean(np.sum((pred - target) ** 2, axis=1))
     gradient = (2 * (pred - target)) / len(pred)
     return error, gradient
 
@@ -107,33 +97,30 @@ class SoftMax(Layer):
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
         batch_size = output_gradient.shape[0]
-        jacob_matrix = self.__output[:, :, np.newaxis] * (
-                np.eye(self.__output.shape[1])[np.newaxis, :, :] - self.__output[:, np.newaxis, :])
-        return (output_gradient[:, np.newaxis, :] @ jacob_matrix).squeeze()
+        classes = output_gradient.shape[1]
+        jacob_matrix = np.zeros((batch_size, classes, classes))
+        diag = np.arange(classes)
+        jacob_matrix[:, diag, diag] = self.__output
+        jacob_matrix -= self.__output[..., None] * self.__output[:, None]
+        return output_gradient @ np.mean(jacob_matrix, axis=0)
 
 
-class Linear(Layer):
-    def forward(self, inp: np.ndarray) -> np.ndarray:
-        return inp
-
-    def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        return output_gradient
 
 
 data = load_iris()
 encoder = OneHotEncoder(sparse_output=False)
 Y = encoder.fit_transform(data["target"].reshape(-1, 1))
 
-x_train, x_test, y_train, y_test = train_test_split(data["data"], Y, test_size=0.5)
+x_train, x_test, y_train, y_test = train_test_split(normalize(data["data"]), Y, test_size=0.8)
 
 # y = y / np.max(y)
 data = np.hstack((x_train, y_train))
 batch_size = 1024
-lr = 0.01
+lr = 0.1
 #
-network = [Dense(4, 8), LeakyRelu(),
-           Dense(8, 6), LeakyRelu(),
-           Dense(6, 3), SoftMax()
+network = [Dense(4, 6), LeakyRelu(),
+           Dense(6, 4), LeakyRelu(),
+           Dense(4, 3), SoftMax()
            ]
 #
 for epoch in range(50000):
@@ -169,115 +156,9 @@ for layer in network:
 acc = (np.argmax(y_pred, axis=1) == np.argmax(y_test, axis=1)).sum() / len(y_pred)
 print(acc)
 
-# x_test = np.linspace(-2, 2, 100).reshape(-1, 1)
-# y_pred = x_test
+# x = normalize(np.linspace(-100, 100, 1000).reshape(-1, 1))
+# y = x
 # for layer in network:
-#     y_pred = layer.forward(y_pred)
-# # plt.ylim(0, 5)
-# # print(y_pred)
-# plt.plot(x_test, y_pred)
-# # plt.scatter(normalize(x), normalize(y))
+#     y = layer.forward(y)
+# plt.plot(x, y)
 # plt.show()
-# y_pred = x
-# for layer in network:
-#     y_pred = layer.forward(y_pred)
-#
-# # model = PolyModel(x, y, 20)
-# #
-# # # print(x)
-# # plt.scatter(x, y)
-# # x_test = np.linspace(-20, 20).reshape(-1, 1)
-# # plt.ylim(np.min(y), np.max(y))
-# # plt.xlim(np.min(x), np.max(x))
-# plt.scatter(x, y_pred)
-# plt.ylim(0, 10)
-# plt.show()
-# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# # device = torch.device("cpu")
-#
-#
-# model = nn.Sequential(
-#     nn.Linear(4, 256),
-#     nn.ReLU(inplace=True),
-#     nn.Linear(256, 128),
-#     nn.ReLU(inplace=True),
-#     nn.Linear(128, 64),
-#     nn.ReLU(inplace=True),
-#     nn.Linear(64, 32),
-#     nn.ReLU(inplace=True),
-#     nn.Linear(32, 3),
-#     nn.Softmax(dim=1)
-# ).to(device)
-#
-# loss_fn = nn.CrossEntropyLoss()
-# optimizer = optim.Adam(model.parameters(), lr=0.0001)
-# batch_size = 1024
-# epochs = 1000
-#
-# temp = ((np.random.rand(10000) - 0.5) * 6 * np.pi).reshape(-1, 1)
-# tempres = np.sin(temp) * 5
-# data = load_iris()
-# x = data["data"]
-# y = data["target"].reshape(-1, 1)
-# x_train, x_test, y_train, y_test = map(lambda x: torch.tensor(x, dtype=torch.float32), train_test_split(x, y, test_size=0.2))
-# dataset = TensorDataset(x_train, torch.squeeze(y_train.type(torch.LongTensor)))
-# test_dataset = TensorDataset(x_test, torch.squeeze(y_test.type(torch.LongTensor)))
-# dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, pin_memory=True)
-# test_dataloader = DataLoader(test_dataset)
-#
-# best_mse = np.inf
-# best_weights = None
-# history = []
-#
-# for epoch in range(epochs):
-#     print(f"Epoch {epoch}/{epochs}")
-#     model.train()
-#     for x, y in dataloader:
-#         x = x.to(device)
-#         y = y.to(device)
-#
-#         optimizer.zero_grad()
-#
-#         score = model(x)
-#         loss = loss_fn(input=score, target=y)
-#         loss.backward()
-#
-#         optimizer.step()
-#
-#     model.eval()
-#     for x, y in dataloader:
-#         x = x.to(device)
-#         y = y.to(device)
-#
-#         y_pred = model(x)
-#         mse = loss_fn(y_pred, y)
-#         mse = float(mse)
-#         history.append(mse)
-#         if mse < best_mse:
-#             best_mse = mse
-#             best_weights = copy.deepcopy(model.state_dict())
-#
-# # plt.plot(x.clone().detach().numpy(), model(x).clone().detach().numpy())
-# # plt.show()
-#
-# model.load_state_dict(best_weights)
-# torch.save(model, "iris.ser")
-# plt.plot(history)
-# plt.show()
-#
-# model.to(torch.device("cpu"))
-# model.eval()
-# y_pred = torch.argmax(model(x_test), dim=1, keepdim=True)
-# accuracy = Accuracy(task="multiclass", num_classes=3)
-# print(accuracy(y_pred, y_test))
-#
-#
-# # points = torch.linspace(-5 * torch.pi, 5 * torch.pi, 100).view(-1, 1).to(device)
-# # res = model(points)
-#
-# # plt.scatter(temp, tempres)
-# # plt.plot(points.cpu().detach().numpy(), res.cpu().detach().numpy())
-# # plt.ylim(-10, 10)
-# # plt.show()
-# # plt.scatter(x.numpy(), model(x).clone().detach().numpy())
-# # plt.show()
