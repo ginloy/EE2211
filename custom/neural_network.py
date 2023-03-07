@@ -1,6 +1,7 @@
-# from sklearn.model_selection import train_test_split
-# from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+from sklearn.datasets import load_iris
 from abc import abstractmethod
+from sklearn.preprocessing import OneHotEncoder
 from typing import Union
 
 import numpy as np
@@ -17,21 +18,24 @@ from custom.models import *
 
 
 def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    error = np.mean(np.sum(-target * np.log(np.clip(pred, 1e-7, 1 - 1e-7)), axis=1))
-    derivative = np.mean(pred - target, axis=0, keepdims=True)
+    error = -np.sum(target * np.log(np.clip(pred, 1e-7, None))) / pred.shape[0]
+    derivative = (pred - target) / pred.shape[0]
     return error, derivative
 
 
 def mse(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     error = np.mean((pred - target) ** 2)
-    gradient = np.mean(2 * (pred - target), axis=0, keepdims=True)
+    gradient = (2 * (pred - target)) / len(pred)
     return error, gradient
 
 
-class Layer:
-    def __init__(self):
-        self.__input: Union[np.ndarray, None] = None
+def normalize(data: np.ndarray) -> np.ndarray:
+    mean = np.mean(data, axis=0)
+    std = np.std(data, axis=0)
+    return (data - mean) / std
 
+
+class Layer:
     @abstractmethod
     def forward(self, inp: np.ndarray) -> np.ndarray:
         pass
@@ -43,8 +47,8 @@ class Layer:
 
 class Dense(Layer):
     def __init__(self, inp_dim: int, out_dim: int):
-        super().__init__()
-        self.__weight = np.random.normal(loc=0, scale=np.sqrt(1/inp_dim), size=(inp_dim, out_dim))
+        self.__input = None
+        self.__weight = np.random.normal(loc=0, scale=np.sqrt(2 / inp_dim), size=(inp_dim, out_dim))
         self.__bias = np.zeros((1, out_dim))
 
     def forward(self, inp: np.ndarray) -> np.ndarray:
@@ -56,38 +60,56 @@ class Dense(Layer):
         mean_input = np.mean(self.__input, axis=0, keepdims=True)
         # print(output_gradient, mean_input)
         prev_weight = self.__weight[:, :]
-        self.__weight -= learn_rate * output_gradient * mean_input.T
-        self.__bias -= learn_rate * output_gradient
+        self.__weight -= learn_rate * self.__input.T @ output_gradient
+        self.__bias -= learn_rate * np.sum(output_gradient, axis=0, keepdims=True)
         return output_gradient @ prev_weight.T
 
 
 class LeakyRelu(Layer):
+
+    def __init__(self, alpha=0.01):
+        self.__alpha = alpha
+        self.__input = None
+
     def forward(self, inp: np.ndarray) -> np.ndarray:
         self.__input = inp
-        return np.clip(inp, 0, 1)
+        return np.maximum(inp, inp * self.__alpha)
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
         temp = np.ones(self.__input.shape)
-        temp[temp < 0] = 0
-        return np.mean(gradient, axis=0, keepdims=True) * output_gradient
+        temp[self.__input < 0] = self.__alpha
+        return temp * output_gradient
         # return learn_rate * (output_gradient > 0)
 
+
 class Tanh(Layer):
+
+    def __init__(self):
+        self.__input = None
+
     def forward(self, inp: np.ndarray) -> np.ndarray:
         self.__input = inp
         return np.tanh(inp)
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        return np.mean((1 - np.tanh(self.__input) ** 2) * output_gradient, axis=0, keepdims=True)
+        return (1 - np.tanh(self.__input) ** 2) * output_gradient
+
 
 class SoftMax(Layer):
+
+    def __init__(self):
+        self.__output = None
+
     def forward(self, inp: np.ndarray) -> np.ndarray:
-        self.__input = inp
         prep = inp - np.max(inp, axis=1, keepdims=True)
-        return np.exp(prep) / np.sum(prep, axis=1, keepdims=True)
+        self.__output = np.exp(prep) / np.sum(np.exp(prep), axis=1, keepdims=True)
+        return self.__output
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        return output_gradient
+        batch_size = output_gradient.shape[0]
+        jacob_matrix = self.__output[:, :, np.newaxis] * (
+                np.eye(self.__output.shape[1])[np.newaxis, :, :] - self.__output[:, np.newaxis, :])
+        return (output_gradient[:, np.newaxis, :] @ jacob_matrix).squeeze()
 
 
 class Linear(Layer):
@@ -98,49 +120,64 @@ class Linear(Layer):
         return output_gradient
 
 
-x = ((np.random.rand(1000)-0.5) * 4 * np.pi).reshape(-1, 1)
-y = x ** 3 - (2 * x**2) + 5
+data = load_iris()
+encoder = OneHotEncoder(sparse_output=False)
+Y = encoder.fit_transform(data["target"].reshape(-1, 1))
+
+x_train, x_test, y_train, y_test = train_test_split(data["data"], Y, test_size=0.5)
+
 # y = y / np.max(y)
-data = np.hstack((x, y))
-batch_size = 1
-lr = 0.001
+data = np.hstack((x_train, y_train))
+batch_size = 1024
+lr = 0.01
 #
-network = [Dense(1, 64),Tanh(), Dense(64, 64),Tanh(),Dense(64, 1)]
+network = [Dense(4, 8), LeakyRelu(),
+           Dense(8, 6), LeakyRelu(),
+           Dense(6, 3), SoftMax()
+           ]
 #
-for epoch in range(150):
-    batches = 0
+for epoch in range(50000):
+    num_batches = 0
     total_error = 0
     np.random.shuffle(data)
     # print(data)
-    for i in range(0, len(data), batch_size):
-        output = data[i:i + batch_size, :1]
-        target = data[i:i + batch_size, 1:2]
+    batches = np.array_split(data, range(batch_size, len(data), batch_size), axis=0)
+    for batch in batches:
+        output = batch[:, :4]
+        target = batch[:, 4:]
         # print(np.hstack((output, target)))
         # break
         for layer in network:
             # print(data)
             output = layer.forward(output)
         #
-        error, gradient = mse(output, target)
+        error, gradient = cat_cross_entropy(output, target)
         total_error += error
-        batches += 1
+        num_batches += 1
         for layer in network[::-1]:
             gradient = layer.backward(gradient, lr)
 
         # print(f"{np.hstack((y, data))}")
         # print(f"Derivative: {derivative}")
 
-    print(f"Epoch: {epoch}, Error: {total_error / batches}")
+    print(f"Epoch: {epoch}, Error: {total_error / num_batches}")
 
-x_test = np.linspace(-3 * np.pi, 3 * np.pi, 100).reshape(-1, 1)
 y_pred = x_test
 for layer in network:
     y_pred = layer.forward(y_pred)
-# plt.ylim(0, 5)
-# print(y_pred)
-plt.plot(x_test, y_pred)
-plt.scatter(x, y)
-plt.show()
+
+acc = (np.argmax(y_pred, axis=1) == np.argmax(y_test, axis=1)).sum() / len(y_pred)
+print(acc)
+
+# x_test = np.linspace(-2, 2, 100).reshape(-1, 1)
+# y_pred = x_test
+# for layer in network:
+#     y_pred = layer.forward(y_pred)
+# # plt.ylim(0, 5)
+# # print(y_pred)
+# plt.plot(x_test, y_pred)
+# # plt.scatter(normalize(x), normalize(y))
+# plt.show()
 # y_pred = x
 # for layer in network:
 #     y_pred = layer.forward(y_pred)
