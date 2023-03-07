@@ -1,8 +1,7 @@
 from abc import abstractmethod
 
 import numpy as np
-from matplotlib import pyplot as plt
-from sklearn.datasets import load_iris, load_digits
+from sklearn.datasets import load_digits
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 
@@ -43,17 +42,14 @@ class Dense(Layer):
         self.__bias = np.zeros((1, out_dim))
 
     def forward(self, inp: np.ndarray) -> np.ndarray:
-        # print(self.__weight)
         self.__input = inp
         return inp @ self.__weight + self.__bias
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        mean_input = np.mean(self.__input, axis=0, keepdims=True)
-        # print(output_gradient, mean_input)
-        prev_weight = self.__weight[:, :]
+        ret = output_gradient @ self.__weight.T
         self.__weight -= learn_rate * self.__input.T @ output_gradient
         self.__bias -= learn_rate * np.sum(output_gradient, axis=0, keepdims=True)
-        return output_gradient @ prev_weight.T
+        return ret
 
 
 class LeakyRelu(Layer):
@@ -70,7 +66,6 @@ class LeakyRelu(Layer):
         temp = np.ones(self.__input.shape)
         temp[self.__input < 0] = self.__alpha
         return temp * output_gradient
-        # return learn_rate * (output_gradient > 0)
 
 
 class Relu(Layer):
@@ -82,8 +77,10 @@ class Relu(Layer):
         return np.maximum(inp, 0)
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        output_gradient[self.__input < 0] = 0
-        return output_gradient
+        temp = output_gradient.copy()
+        temp[self.__input < 0] = 0
+        return temp
+
 
 class Tanh(Layer):
     def __init__(self):
@@ -114,9 +111,7 @@ class SoftMax(Layer):
         diag = np.arange(classes)
         jacob_matrix[:, diag, diag] = self.__output
         jacob_matrix -= self.__output[..., None] * self.__output[:, None]
-        return (output_gradient[:,None] @ jacob_matrix).squeeze()
-
-
+        return (output_gradient[:, None] @ jacob_matrix).squeeze()
 
 
 data = load_digits()
@@ -135,7 +130,7 @@ x_train, x_test, y_train, y_test = train_test_split(normalize(data["data"]), Y, 
 # y = y / np.max(y)
 data = np.hstack((x_train, y_train))
 batch_size = 32
-lr = 0.1
+lr = 1
 #
 network = [Dense(64, 40), Relu(),
            Dense(40, 30), Relu(),
