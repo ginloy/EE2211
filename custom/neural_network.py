@@ -107,18 +107,17 @@ class SoftMax(Layer):
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
         batch_size = output_gradient.shape[0]
         classes = output_gradient.shape[1]
-        jacob_matrix = np.zeros((batch_size, classes, classes))
-        diag = np.arange(classes)
-        jacob_matrix[:, diag, diag] = self.__output
-        jacob_matrix -= self.__output[..., None] * self.__output[:, None]
-        return (output_gradient[:, None] @ jacob_matrix).squeeze()
+        eyes = np.tile(np.eye(classes), (batch_size, 1, 1))
+        jacob_matrix = np.einsum("ij,ijk->ijk", self.__output, eyes)\
+            - np.einsum("ij,ik->ijk", self.__output, self.__output)
+        return np.einsum("ij,ijk->ik", output_gradient, jacob_matrix)
 
 
 data = load_digits()
 encoder = OneHotEncoder(sparse_output=False)
-Y = encoder.fit_transform(data["target"].reshape(-1, 1))
+Y = encoder.fit_transform(normalize(data["target"].reshape(-1, 1)))
 
-x_train, x_test, y_train, y_test = train_test_split(normalize(data["data"]), Y, test_size=0.4)
+x_train, x_test, y_train, y_test = train_test_split(data["data"] / np.max(data["data"]), Y, test_size=0.4)
 
 # x = np.linspace(-10, 10, 10000).reshape(-1, 1)
 # y = x ** 3 + 2 * x**2 - 4 * x - 3
@@ -130,7 +129,7 @@ x_train, x_test, y_train, y_test = train_test_split(normalize(data["data"]), Y, 
 # y = y / np.max(y)
 data = np.hstack((x_train, y_train))
 batch_size = 32
-lr = 1
+lr = 0.1
 #
 network = [Dense(64, 40), Relu(),
            Dense(40, 30), Relu(),
