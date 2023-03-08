@@ -7,13 +7,13 @@ from sklearn.preprocessing import OneHotEncoder
 
 
 def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    error = -np.sum(target * np.log(np.clip(pred, 1e-7, None))) / pred.shape[0]
-    derivative = (pred - target) / pred.shape[0]
-    return error, derivative
+    error = -np.mean(np.sum(target * np.log(pred), axis=1))
+    gradient = (pred - target) / pred.shape[0]
+    return error, gradient
 
 
 def mse(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    error = np.mean(np.sum((pred - target) ** 2, axis=1))
+    error = np.mean((pred - target) ** 2, axis=0)
     gradient = (2 * (pred - target)) / len(pred)
     return error, gradient
 
@@ -105,12 +105,13 @@ class SoftMax(Layer):
         return self.__output
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        batch_size = output_gradient.shape[0]
-        classes = output_gradient.shape[1]
-        eyes = np.tile(np.eye(classes), (batch_size, 1, 1))
-        jacob_matrix = np.einsum("ij,ijk->ijk", self.__output, eyes)\
-            - np.einsum("ij,ik->ijk", self.__output, self.__output)
-        return np.einsum("ij,ijk->ik", output_gradient, jacob_matrix)
+        # batch_size = output_gradient.shape[0]
+        # classes = output_gradient.shape[1]
+        # eyes = np.tile(np.eye(classes), (batch_size, 1, 1))
+        # jacob_matrix = np.einsum("ij,ijk->ijk", self.__output, eyes)\
+        #     - np.einsum("ij,ik->ijk", self.__output, self.__output)
+        # return np.einsum("ij,ijk->ik", output_gradient, jacob_matrix)
+        return output_gradient
 
 
 data = load_digits()
