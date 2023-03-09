@@ -8,13 +8,13 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
 
 
-def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     error = -np.mean(np.sum(target * np.log(pred), axis=1))
     gradient = (pred - target) / pred.shape[0]
     return error, gradient
 
 
-def mse(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def mse(pred: np.ndarray, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     error = np.mean((pred - target) ** 2, axis=0)
     gradient = (2 * (pred - target)) / len(pred)
     return error, gradient
@@ -167,11 +167,16 @@ class DigitModel(Module):
 # encoder = OneHotEncoder(sparse_output=False)
 # Y = encoder.fit_transform(normalize(data["target"].reshape(-1, 1)))
 #
-# x_train, x_test, y_train, y_test = train_test_split(data["data"] / np.max(data["data"]), Y, test_size=0.4)
+# x_train, x_test, y_train, y_test = train_test_split(data["data"], Y, test_size=0.4)
 #
+# train_mean = np.mean(x_train)
+# train_std = np.std(x_train)
+#
+# (x_train, x_test) = map(lambda x: (x - train_mean) / train_std, (x_train, x_test))
+
 # model = DigitModel()
 # model.fit(x_train, y_train, cat_cross_entropy, 0.1, batch_size=32, max_epochs=1000)
-#
+
 # y_pred = model(x_test)
 # acc = (encoder.inverse_transform(y_pred) == encoder.inverse_transform(y_test)).sum() / len(y_pred)
 # print(f"Accuracy: {acc}")
