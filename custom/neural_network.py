@@ -10,7 +10,7 @@ from sklearn.utils import shuffle
 
 def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     error = -np.mean(np.sum(target * np.log(pred), axis=1))
-    gradient = (pred - target) / pred.shape[0]
+    gradient = (pred - target) / len(pred)
     return error, gradient
 
 
@@ -117,15 +117,26 @@ class SoftMax(Layer):
 
 
 class Module:
+    def __init__(self):
+        self.normalize = lambda x: x
+
     @abstractmethod
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def _forward_raw_data(self, x: np.ndarray) -> np.ndarray:
         pass
 
     @abstractmethod
     def optimize(self, gradients, lr):
         pass
 
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        return self._forward_raw_data(self.normalize(x))
+
     def fit(self, x: np.ndarray, y: np.ndarray, error_fn, lr, batch_size: int = 1, max_epochs: int = 10000):
+        train_mean = np.mean(x, axis=0)
+        train_std = np.std(x, axis=0)
+        train_std[train_std == 0] = 1
+        self.normalize = lambda x_raw: (x_raw - train_mean) / train_std
+        x = self.normalize(x)
         for epoch in range(max_epochs):
             x, y = shuffle(x, y)
             x_batches = np.array_split(x, range(batch_size, len(x), batch_size), axis=0)
@@ -133,12 +144,13 @@ class Module:
             total_error = 0
             for batch_idx, x_batch in enumerate(x_batches):
                 y_batch = y_batches[batch_idx]
-                y_pred = self.forward(x_batch)
+                y_pred = self._forward_raw_data(x_batch)
                 loss = error_fn(y_pred, y_batch)
                 total_error += loss[0]
                 self.optimize(loss[1], lr)
 
-            print(f"Epoch {epoch}, Error: {total_error / len(x_batches)}")
+            print(f"\rEpoch {epoch}, Error: {total_error / len(x_batches)}", end="")
+        print()
 
     def test(self, x: np.ndarray, y: np.ndarray, error_fn):
         return error_fn(self(x), y)
@@ -149,12 +161,13 @@ class Module:
 
 class DigitModel(Module):
     def __init__(self):
+        super().__init__()
         self.__layers = [
             Dense(64, 35), Relu(),
             Dense(35, 10), SoftMax()
         ]
 
-    def forward(self, x: np.ndarray) -> np.ndarray:
+    def _forward_raw_data(self, x: np.ndarray) -> np.ndarray:
         for layer in self.__layers:
             x = layer.forward(x)
         return x
@@ -163,23 +176,21 @@ class DigitModel(Module):
         for layer in self.__layers[::-1]:
             gradients = layer.backward(gradients, lr)
 
-# data = load_digits()
-# encoder = OneHotEncoder(sparse_output=False)
-# Y = encoder.fit_transform(normalize(data["target"].reshape(-1, 1)))
-#
-# x_train, x_test, y_train, y_test = train_test_split(data["data"], Y, test_size=0.4)
-#
-# train_mean = np.mean(x_train)
-# train_std = np.std(x_train)
-#
-# (x_train, x_test) = map(lambda x: (x - train_mean) / train_std, (x_train, x_test))
 
-# model = DigitModel()
-# model.fit(x_train, y_train, cat_cross_entropy, 0.1, batch_size=32, max_epochs=1000)
+data = load_digits()
+encoder = OneHotEncoder(sparse_output=False)
+Y = encoder.fit_transform(data["target"].reshape(-1, 1))
 
-# y_pred = model(x_test)
-# acc = (encoder.inverse_transform(y_pred) == encoder.inverse_transform(y_test)).sum() / len(y_pred)
-# print(f"Accuracy: {acc}")
+x_train, x_test, y_train, y_test = train_test_split(data["data"], Y, test_size=0.4)
+
+# print(x_train, x_test)
+
+model = DigitModel()
+model.fit(x_train, y_train, cat_cross_entropy, 0.1, batch_size=32, max_epochs=1000)
+
+y_pred = model(x_test)
+acc = (encoder.inverse_transform(y_pred) == encoder.inverse_transform(y_test)).sum() / len(y_pred)
+print(f"Accuracy: {acc}")
 # x = np.linspace(-10, 10, 10000).reshape(-1, 1)
 # y = x ** 3 + 2 * x**2 - 4 * x - 3
 
