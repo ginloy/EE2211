@@ -1,9 +1,11 @@
 from abc import abstractmethod
+from typing import Tuple, Any
 
 import numpy as np
 from sklearn.datasets import load_digits
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.utils import shuffle
 
 
 def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -114,12 +116,65 @@ class SoftMax(Layer):
         return output_gradient
 
 
-data = load_digits()
-encoder = OneHotEncoder(sparse_output=False)
-Y = encoder.fit_transform(normalize(data["target"].reshape(-1, 1)))
+class Module:
+    @abstractmethod
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        pass
 
-x_train, x_test, y_train, y_test = train_test_split(data["data"] / np.max(data["data"]), Y, test_size=0.4)
+    @abstractmethod
+    def optimize(self, gradients, lr):
+        pass
 
+    def fit(self, x: np.ndarray, y: np.ndarray, error_fn, lr, batch_size: int = 1, max_epochs: int = 10000):
+        for epoch in range(max_epochs):
+            x, y = shuffle(x, y)
+            x_batches = np.array_split(x, range(batch_size, len(x), batch_size), axis=0)
+            y_batches = np.array_split(y, range(batch_size, len(y), batch_size), axis=0)
+            total_error = 0
+            for batch_idx, x_batch in enumerate(x_batches):
+                y_batch = y_batches[batch_idx]
+                y_pred = self.forward(x_batch)
+                loss = error_fn(y_pred, y_batch)
+                total_error += loss[0]
+                self.optimize(loss[1], lr)
+
+            print(f"Epoch {epoch}, Error: {total_error / len(x_batches)}")
+
+    def test(self, x: np.ndarray, y: np.ndarray, error_fn):
+        return error_fn(self(x), y)
+
+    def __call__(self, x: np.ndarray) -> np.ndarray:
+        return self.forward(x)
+
+
+class DigitModel(Module):
+    def __init__(self):
+        self.__layers = [
+            Dense(64, 35), Relu(),
+            Dense(35, 10), SoftMax()
+        ]
+
+    def forward(self, x: np.ndarray) -> np.ndarray:
+        for layer in self.__layers:
+            x = layer.forward(x)
+        return x
+
+    def optimize(self, gradients, lr):
+        for layer in self.__layers[::-1]:
+            gradients = layer.backward(gradients, lr)
+
+# data = load_digits()
+# encoder = OneHotEncoder(sparse_output=False)
+# Y = encoder.fit_transform(normalize(data["target"].reshape(-1, 1)))
+#
+# x_train, x_test, y_train, y_test = train_test_split(data["data"] / np.max(data["data"]), Y, test_size=0.4)
+#
+# model = DigitModel()
+# model.fit(x_train, y_train, cat_cross_entropy, 0.1, batch_size=32, max_epochs=1000)
+#
+# y_pred = model(x_test)
+# acc = (encoder.inverse_transform(y_pred) == encoder.inverse_transform(y_test)).sum() / len(y_pred)
+# print(f"Accuracy: {acc}")
 # x = np.linspace(-10, 10, 10000).reshape(-1, 1)
 # y = x ** 3 + 2 * x**2 - 4 * x - 3
 
@@ -128,51 +183,48 @@ x_train, x_test, y_train, y_test = train_test_split(data["data"] / np.max(data["
 # y_train = y
 
 # y = y / np.max(y)
-data = np.hstack((x_train, y_train))
-batch_size = 32
-lr = 0.1
+# data = np.hstack((x_train, y_train))
+# batch_size = 32
+# lr = 0.1
+# #
+# network = [Dense(64, 35), Relu(),
+#            Dense(35, 10), SoftMax()
+#            ]
+# #
+# for epoch in range(1000):
+#     num_batches = 0
+#     total_error = 0
+#     np.random.shuffle(data)
+#     # print(data)
+#     batches = np.array_split(data, range(batch_size, len(data), batch_size), axis=0)
+#     for batch in batches:
+#         output = batch[:, :64]
+#         target = batch[:, 64:]
+#         # print(np.hstack((output, target)))
+#         # break
+#         for layer in network:
+#             # print(data)
+#             output = layer.forward(output)
+#         #
+#         error, gradient = cat_cross_entropy(output, target)
+#         total_error += error
+#         num_batches += 1
+#         for layer in network[::-1]:
+#             gradient = layer.backward(gradient, lr)
 #
-network = [Dense(64, 40), Relu(),
-           Dense(40, 30), Relu(),
-           Dense(30, 20), Relu(),
-           Dense(20, 15), Relu(),
-           Dense(15, 10), SoftMax()
-           ]
+#         # print(f"{np.hstack((y, data))}")
+#         # print(f"Derivative: {derivative}")
 #
-for epoch in range(500):
-    num_batches = 0
-    total_error = 0
-    np.random.shuffle(data)
-    # print(data)
-    batches = np.array_split(data, range(batch_size, len(data), batch_size), axis=0)
-    for batch in batches:
-        output = batch[:, :64]
-        target = batch[:, 64:]
-        # print(np.hstack((output, target)))
-        # break
-        for layer in network:
-            # print(data)
-            output = layer.forward(output)
-        #
-        error, gradient = cat_cross_entropy(output, target)
-        total_error += error
-        num_batches += 1
-        for layer in network[::-1]:
-            gradient = layer.backward(gradient, lr)
-
-        # print(f"{np.hstack((y, data))}")
-        # print(f"Derivative: {derivative}")
-
-    print(f"Epoch: {epoch}, Error: {total_error / num_batches}")
-
-y_pred = x_test
-for layer in network:
-    y_pred = layer.forward(y_pred)
+#     print(f"Epoch: {epoch}, Error: {total_error / num_batches}")
 #
-# plt.scatter(x_train, y_pred)
-
-acc = (np.argmax(y_pred, axis=1) == np.argmax(y_test, axis=1)).sum() / len(y_pred)
-print(acc)
+# y_pred = x_test
+# for layer in network:
+#     y_pred = layer.forward(y_pred)
+# #
+# # plt.scatter(x_train, y_pred)
+#
+# acc = (np.argmax(y_pred, axis=1) == np.argmax(y_test, axis=1)).sum() / len(y_pred)
+# print(acc)
 
 # x = normalize(np.linspace(-100, 100, 1000).reshape(-1, 1))
 # y = x
