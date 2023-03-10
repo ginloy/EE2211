@@ -1,10 +1,7 @@
 from abc import abstractmethod
-from typing import Tuple, Any
+from typing import Tuple
 
 import numpy as np
-from sklearn.datasets import load_digits
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import shuffle
 
 
@@ -116,6 +113,18 @@ class SoftMax(Layer):
         return output_gradient
 
 
+class Flatten(Layer):
+    def __init__(self):
+        self.__input_shape = None
+
+    def forward(self, inp: np.ndarray) -> np.ndarray:
+        self.__input_shape = inp.shape
+        return inp.reshape(len(inp), -1)
+
+    def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
+        return output_gradient.reshape(self.__input_shape)
+
+
 class Module:
     def __init__(self):
         self.normalize = lambda x: x
@@ -132,8 +141,10 @@ class Module:
         return self._forward_raw_data(self.normalize(x))
 
     def fit(self, x: np.ndarray, y: np.ndarray, error_fn, lr, batch_size: int = 1, max_epochs: int = 10000):
-        train_mean = np.mean(x, axis=0)
-        train_std = np.std(x, axis=0)
+        dims = x.ndim
+        axes = tuple(range(dims - 1))
+        train_mean = np.mean(x, axis=axes)
+        train_std = np.std(x, axis=axes)
         train_std[train_std == 0] = 1
         self.normalize = lambda x_raw: (x_raw - train_mean) / train_std
         x = self.normalize(x)
@@ -176,21 +187,20 @@ class DigitModel(Module):
         for layer in self.__layers[::-1]:
             gradients = layer.backward(gradients, lr)
 
-
-data = load_digits()
-encoder = OneHotEncoder(sparse_output=False)
-Y = encoder.fit_transform(data["target"].reshape(-1, 1))
-
-x_train, x_test, y_train, y_test = train_test_split(data["data"], Y, test_size=0.4)
-
-# print(x_train, x_test)
-
-model = DigitModel()
-model.fit(x_train, y_train, cat_cross_entropy, 0.1, batch_size=32, max_epochs=1000)
-
-y_pred = model(x_test)
-acc = (encoder.inverse_transform(y_pred) == encoder.inverse_transform(y_test)).sum() / len(y_pred)
-print(f"Accuracy: {acc}")
+# data = load_digits()
+# encoder = OneHotEncoder(sparse_output=False)
+# Y = encoder.fit_transform(data["target"].reshape(-1, 1))
+#
+# x_train, x_test, y_train, y_test = train_test_split(data["data"], Y, test_size=0.4)
+#
+# # print(x_train, x_test)
+#
+# model = DigitModel()
+# model.fit(x_train, y_train, cat_cross_entropy, 0.1, batch_size=32, max_epochs=1000)
+#
+# y_pred = model(x_test)
+# acc = (encoder.inverse_transform(y_pred) == encoder.inverse_transform(y_test)).sum() / len(y_pred)
+# print(f"Accuracy: {acc}")
 # x = np.linspace(-10, 10, 10000).reshape(-1, 1)
 # y = x ** 3 + 2 * x**2 - 4 * x - 3
 
