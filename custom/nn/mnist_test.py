@@ -7,12 +7,12 @@ DATA_PATH = "archive"
 
 
 def get_data():
-    train_data = np.loadtxt(DATA_PATH + "/mnist_train.csv", skiprows=1, max_rows=1000, delimiter=',')
-    test_data = np.loadtxt(DATA_PATH + "/mnist_test.csv", skiprows=1,max_rows=1000, delimiter=',')
+    train_data = np.loadtxt(DATA_PATH + "/mnist_train.csv", skiprows=1, delimiter=',')
+    test_data = np.loadtxt(DATA_PATH + "/mnist_test.csv", skiprows=1, delimiter=',')
     y_train = train_data[:, :1].reshape(-1, 1).astype("int32")
-    x_train = train_data[:, 1:].reshape(-1, 28, 28, 1)
+    x_train = train_data[:, 1:].reshape(-1, 28, 28, 1).astype("float32")
     y_test = test_data[:, 0].reshape(-1, 1).astype("int32")
-    x_test = test_data[:, 1:].reshape(-1, 28, 28, 1)
+    x_test = test_data[:, 1:].reshape(-1, 28, 28, 1).astype("float32")
     return x_train, x_test, y_train, y_test
 
 
@@ -20,9 +20,9 @@ class MnistModel(Module):
     def __init__(self):
         super().__init__()
         self.layers = [
+            Convolution(3, 1, 10), Relu(), MaxPool(),
             Flatten(),
-            Dense(784, 400), Relu(),
-            Dense(400, 10), SoftMax()
+            Dense(1690, 10), SoftMax()
         ]
 
     def _forward_raw_data(self, x: np.ndarray) -> np.ndarray:
