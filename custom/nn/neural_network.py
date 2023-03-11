@@ -2,7 +2,9 @@ from abc import abstractmethod
 from typing import Tuple
 
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 from sklearn.utils import shuffle
+from scipy.signal import correlate, convolve
 
 
 def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -49,6 +51,39 @@ class Dense(Layer):
         self.__weight -= learn_rate * self.__input.T @ output_gradient
         self.__bias -= learn_rate * np.sum(output_gradient, axis=0, keepdims=True)
         return ret
+
+
+class Convolution(Layer):
+    def __init__(self, kernel_size: int, input_channels: int, output_channels: int):
+        self.__input = None
+        self.__kernel_size = kernel_size
+        self.__kernels = np.random.normal(loc=0, scale=np.sqrt(2 / input_channels),
+                                          size=(kernel_size, kernel_size, input_channels, output_channels))
+        self.__bias = np.zeros((1, 1, 1, output_channels))
+
+    def forward(self, inp: np.ndarray) -> np.ndarray:
+        self.__input = inp
+        window_shape = self.__kernels.shape[:-1]
+        windows = sliding_window_view(inp, window_shape, axis=(1, 2, 3))
+        return np.tensordot(windows, self.__kernels, axes=3).squeeze(axis=3) + self.__bias
+
+    def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
+        inp_window_shape = (output_gradient.shape[1], output_gradient.shape[2], self.__input.shape[3])
+        grad_window_shape = (self.__kernel_size, self.__kernel_size, self.__kernels.shape[-1])
+        bias_grads = np.sum(output_gradient, axis=(0, 1, 2))
+        pad_amt = self.__kernel_size - 1
+        padded_grads = np.pad(output_gradient, ((0, 0), (pad_amt, pad_amt), (pad_amt, pad_amt), (0, 0)),
+                              mode="constant")
+        flipped_kernels = np.einsum("ijkl->ijlk", self.__kernels[::-1, ::-1])
+        grad_windows = sliding_window_view(padded_grads, grad_window_shape, axis=(1, 2, 3)).squeeze(axis=3)
+        input_grads = np.tensordot(grad_windows, flipped_kernels, axes=3)
+        input_windows = sliding_window_view(self.__input, inp_window_shape, axis=(1, 2, 3)).squeeze(axis=3)
+        # temp = np.sum(output_gradient[..., None, :], axis=0)
+        kernel_grads = np.tensordot(input_windows, output_gradient, axes=((0, 3, 4), (0, 1, 2)))
+
+        self.__kernels -= learn_rate * kernel_grads
+        self.__bias -= learn_rate * bias_grads
+        return input_grads
 
 
 class LeakyRelu(Layer):
