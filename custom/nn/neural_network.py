@@ -63,27 +63,59 @@ class Convolution(Layer):
 
     def forward(self, inp: np.ndarray) -> np.ndarray:
         self.__input = inp
-        window_shape = self.__kernels.shape[:-1]
-        windows = sliding_window_view(inp, window_shape, axis=(1, 2, 3))
-        return np.tensordot(windows, self.__kernels, axes=3).squeeze(axis=3) + self.__bias
+        window_shape = self.__kernels.shape[:2]
+        windows = sliding_window_view(inp, window_shape, axis=(1, 2))
+        return np.tensordot(windows, self.__kernels, axes=((4, 5, 3), (0, 1, 2))) + self.__bias
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        inp_window_shape = (output_gradient.shape[1], output_gradient.shape[2], self.__input.shape[3])
-        grad_window_shape = (self.__kernel_size, self.__kernel_size, self.__kernels.shape[-1])
+        inp_window_shape = (output_gradient.shape[1], output_gradient.shape[2])
+        grad_window_shape = (self.__kernel_size, self.__kernel_size)
         bias_grads = np.sum(output_gradient, axis=(0, 1, 2))
         pad_amt = self.__kernel_size - 1
         padded_grads = np.pad(output_gradient, ((0, 0), (pad_amt, pad_amt), (pad_amt, pad_amt), (0, 0)),
-                              mode="constant")
-        flipped_kernels = np.einsum("ijkl->ijlk", self.__kernels[::-1, ::-1])
-        grad_windows = sliding_window_view(padded_grads, grad_window_shape, axis=(1, 2, 3)).squeeze(axis=3)
-        input_grads = np.tensordot(grad_windows, flipped_kernels, axes=3)
-        input_windows = sliding_window_view(self.__input, inp_window_shape, axis=(1, 2, 3)).squeeze(axis=3)
+                              mode="constant", constant_values=0)
+        flipped_kernels = self.__kernels[::-1, ::-1]
+        grad_windows = sliding_window_view(padded_grads, grad_window_shape, axis=(1, 2))
+        input_grads = np.tensordot(grad_windows, flipped_kernels, axes=((4, 5, 3), (0, 1, 3)))
+        input_windows = sliding_window_view(self.__input, inp_window_shape, axis=(1, 2))
         # temp = np.sum(output_gradient[..., None, :], axis=0)
-        kernel_grads = np.tensordot(input_windows, output_gradient, axes=((0, 3, 4), (0, 1, 2)))
+        kernel_grads = np.tensordot(input_windows, output_gradient, axes=((0, 4, 5), (0, 1, 2)))
 
         self.__kernels -= learn_rate * kernel_grads
         self.__bias -= learn_rate * bias_grads
         return input_grads
+
+
+class MaxPool(Layer):
+    def __init__(self):
+        self.__mask = None
+        self.__inp_shape = None
+        self.__padded_shape = None
+
+    def forward(self, inp: np.ndarray) -> np.ndarray:
+        self.__inp_shape = inp.shape
+        if self.__inp_shape[1] % 2 == 1 and self.__inp_shape[2] % 2 == 1:
+            inp = np.pad(inp, ((0, 0), (0, 1), (0, 1), (0, 0)), mode="constant", constant_values=0)
+        elif self.__inp_shape[1] % 2 == 1:
+            inp = np.pad(inp, ((0, 0), (0, 1), (0, 0), (0, 0)), mode="constant", constant_values=0)
+        elif self.__inp_shape[2] % 2 == 1:
+            inp = np.pad(inp, ((0, 0), (0, 0), (0, 1), (0,0)), mode="constant", constant_values=0)
+        self.__padded_shape = inp.shape
+        windows = sliding_window_view(inp, (2, 2), axis=(1, 2))[:, ::2, ::2]
+        mx = windows.max(axis=(4, 5), keepdims=True)
+        self.__mask = np.isclose(windows, mx)
+        return mx.squeeze()
+
+    def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
+        windows = sliding_window_view(output_gradient, (1, 1), axis=(1, 2))
+        temp = (self.__mask * windows).transpose(0, 1, 4, 2, 5, 3).reshape(self.__padded_shape)
+        if self.__inp_shape[1] % 2 == 1 and self.__inp_shape[2] % 2 == 1:
+            return temp[:, :-1, :-1, :]
+        elif self.__inp_shape[1] % 2 == 1:
+            return temp[:, :-1, :, :]
+        elif self.__inp_shape[2] % 2 == 1:
+            return temp[:, :, :-1, :]
+        return temp
 
 
 class LeakyRelu(Layer):
