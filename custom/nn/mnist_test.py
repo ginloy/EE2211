@@ -7,8 +7,8 @@ DATA_PATH = "archive"
 
 
 def get_data():
-    train_data = np.loadtxt(DATA_PATH + "/mnist_train.csv", skiprows=1, delimiter=',')
-    test_data = np.loadtxt(DATA_PATH + "/mnist_test.csv", skiprows=1, delimiter=',')
+    train_data = np.loadtxt(DATA_PATH + "/mnist_train.csv", skiprows=1, delimiter=',', max_rows=1000)
+    test_data = np.loadtxt(DATA_PATH + "/mnist_test.csv", skiprows=1, delimiter=',', max_rows=1000)
     y_train = train_data[:, :1].reshape(-1, 1).astype("int32")
     x_train = train_data[:, 1:].reshape(-1, 28, 28, 1).astype("float32")
     y_test = test_data[:, 0].reshape(-1, 1).astype("int32")
@@ -20,9 +20,10 @@ class MnistModel(Module):
     def __init__(self):
         super().__init__()
         self.layers = [
-            Convolution(3, 1, 10), Relu(), MaxPool(),
+            Convolution(3, 1, 64), Relu(), MaxPool(),
+            Convolution(3, 64, 256), Relu(), MaxPool(),
             Flatten(),
-            Dense(1690, 10), SoftMax()
+            Dense(9216, 10), SoftMax()
         ]
 
     def _forward_raw_data(self, x: np.ndarray) -> np.ndarray:
@@ -40,7 +41,7 @@ def main():
     encoder = OneHotEncoder(sparse_output=False)
     y = encoder.fit_transform(y_train)
     model = MnistModel()
-    model.fit(x_train, y, cat_cross_entropy, 0.01, batch_size=32, max_epochs=30)
+    model.fit(x_train, y, cat_cross_entropy, 0.01, batch_size=32, max_epochs=5)
     y_pred = model(x_test)
     acc = (encoder.inverse_transform(y_pred) == y_test).sum() / len(y_pred)
     print(f"Acc: {acc}")

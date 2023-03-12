@@ -2,9 +2,8 @@ from abc import abstractmethod
 from typing import Tuple
 
 import numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
+from numpy.lib.stride_tricks import as_strided
 from sklearn.utils import shuffle
-from scipy.signal import correlate, convolve
 
 
 def cat_cross_entropy(pred: np.ndarray, target: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -61,25 +60,35 @@ class Convolution(Layer):
                                           size=(kernel_size, kernel_size, input_channels, output_channels))
         self.__bias = np.zeros((1, 1, 1, output_channels))
 
+    @classmethod
+    def correlate(cls, a: np.ndarray, b: np.ndarray):
+        hout = a.shape[1] - b.shape[0] + 1
+        wout = a.shape[2] - b.shape[1] + 1
+        temp = cls.windows(a, (b.shape[0], b.shape[1]))
+        return np.tensordot(temp, b, axes=3)
+
+    @classmethod
+    def windows(cls, a: np.ndarray, window_shape) -> np.ndarray:
+        hout = a.shape[1] - window_shape[0] + 1
+        wout = a.shape[2] - window_shape[1] + 1
+        return as_strided(a, (a.shape[0], hout, wout, window_shape[0], window_shape[1], a.shape[3]),
+                          a.strides[:3] + a.strides[1:])
+
     def forward(self, inp: np.ndarray) -> np.ndarray:
         self.__input = inp
-        window_shape = self.__kernels.shape[:2]
-        windows = sliding_window_view(inp, window_shape, axis=(1, 2))
-        return np.tensordot(windows, self.__kernels, axes=((4, 5, 3), (0, 1, 2))) + self.__bias
+        return self.correlate(inp, self.__kernels) + self.__bias
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        inp_window_shape = (output_gradient.shape[1], output_gradient.shape[2])
-        grad_window_shape = (self.__kernel_size, self.__kernel_size)
         bias_grads = np.sum(output_gradient, axis=(0, 1, 2))
+
         pad_amt = self.__kernel_size - 1
         padded_grads = np.pad(output_gradient, ((0, 0), (pad_amt, pad_amt), (pad_amt, pad_amt), (0, 0)),
                               mode="constant", constant_values=0)
-        flipped_kernels = self.__kernels[::-1, ::-1]
-        grad_windows = sliding_window_view(padded_grads, grad_window_shape, axis=(1, 2))
-        input_grads = np.tensordot(grad_windows, flipped_kernels, axes=((4, 5, 3), (0, 1, 3)))
-        input_windows = sliding_window_view(self.__input, inp_window_shape, axis=(1, 2))
-        # temp = np.sum(output_gradient[..., None, :], axis=0)
-        kernel_grads = np.tensordot(input_windows, output_gradient, axes=((0, 4, 5), (0, 1, 2)))
+        flipped_kernels = self.__kernels[::-1, ::-1].transpose(0, 1, 3, 2)
+        input_grads = self.correlate(padded_grads, flipped_kernels)
+
+        input_windows = self.windows(self.__input, (output_gradient.shape[1], output_gradient.shape[2]))
+        kernel_grads = np.tensordot(input_windows, output_gradient, axes=((0, 3, 4), (0, 1, 2)))
 
         self.__kernels -= learn_rate * kernel_grads
         self.__bias -= learn_rate * bias_grads
@@ -92,6 +101,14 @@ class MaxPool(Layer):
         self.__inp_shape = None
         self.__padded_shape = None
 
+    @classmethod
+    def windows(cls, inp: np.ndarray, window_shape) -> np.ndarray:
+        hout = inp.shape[1] // window_shape[0]
+        wout = inp.shape[2] // window_shape[1]
+        return as_strided(inp, (inp.shape[0], hout, wout, window_shape[0], window_shape[1], inp.shape[3]),
+                          inp.strides[:1] + (
+                              inp.strides[1] * window_shape[0], inp.strides[2] * window_shape[1]) + inp.strides[1:])
+
     def forward(self, inp: np.ndarray) -> np.ndarray:
         self.__inp_shape = inp.shape
         if self.__inp_shape[1] % 2 == 1 and self.__inp_shape[2] % 2 == 1:
@@ -99,16 +116,17 @@ class MaxPool(Layer):
         elif self.__inp_shape[1] % 2 == 1:
             inp = np.pad(inp, ((0, 0), (0, 1), (0, 0), (0, 0)), mode="constant", constant_values=0)
         elif self.__inp_shape[2] % 2 == 1:
-            inp = np.pad(inp, ((0, 0), (0, 0), (0, 1), (0,0)), mode="constant", constant_values=0)
+            inp = np.pad(inp, ((0, 0), (0, 0), (0, 1), (0, 0)), mode="constant", constant_values=0)
         self.__padded_shape = inp.shape
-        windows = sliding_window_view(inp, (2, 2), axis=(1, 2))[:, ::2, ::2]
-        mx = windows.max(axis=(4, 5), keepdims=True)
+        # windows = sliding_window_view(inp, (2, 2), axis=(1, 2))[:, ::2, ::2]
+        windows = self.windows(inp, (2, 2))
+        mx = windows.max(axis=(3, 4), keepdims=True)
         self.__mask = np.isclose(windows, mx)
         return mx.squeeze()
 
     def backward(self, output_gradient: np.ndarray, learn_rate: float) -> np.ndarray:
-        windows = sliding_window_view(output_gradient, (1, 1), axis=(1, 2))
-        temp = (self.__mask * windows).transpose(0, 1, 4, 2, 5, 3).reshape(self.__padded_shape)
+        windows = self.windows(output_gradient, (1, 1))
+        temp = (self.__mask * windows).transpose(0, 1, 3, 2, 4, 5).reshape(self.__padded_shape)
         if self.__inp_shape[1] % 2 == 1 and self.__inp_shape[2] % 2 == 1:
             return temp[:, :-1, :-1, :]
         elif self.__inp_shape[1] % 2 == 1:
