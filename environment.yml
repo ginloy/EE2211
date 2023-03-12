@@ -16,4 +16,5 @@ dependencies:
   - pytorch-cuda=11.7
   - torchmetrics
   - pytorch-lightning
+  - cupy
 prefix: C:\Users\Li Yong\anaconda3\envs\EE2211
