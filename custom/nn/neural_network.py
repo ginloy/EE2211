@@ -62,8 +62,6 @@ class Convolution(Layer):
 
     @classmethod
     def correlate(cls, a: np.ndarray, b: np.ndarray):
-        hout = a.shape[1] - b.shape[0] + 1
-        wout = a.shape[2] - b.shape[1] + 1
         temp = cls.windows(a, (b.shape[0], b.shape[1]))
         return np.tensordot(temp, b, axes=3)
 
