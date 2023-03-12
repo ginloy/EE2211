@@ -1,8 +1,8 @@
 from abc import abstractmethod
 from typing import Tuple
 
-import numpy as np
 import cupy as cp
+import numpy as np
 from cupy.lib.stride_tricks import as_strided
 from sklearn.utils import shuffle
 
@@ -39,8 +39,8 @@ class Layer:
 class Dense(Layer):
     def __init__(self, inp_dim: int, out_dim: int):
         self.__input = None
-        self.__weight = cp.random.normal(loc=0, scale=cp.sqrt(2 / inp_dim), size=(inp_dim, out_dim))
-        self.__bias = cp.zeros((1, out_dim))
+        self.__weight = cp.random.normal(loc=0, scale=cp.sqrt(2 / inp_dim), size=(inp_dim, out_dim), dtype="float32")
+        self.__bias = cp.zeros((1, out_dim), dtype="float32")
 
     def forward(self, inp: cp.ndarray) -> cp.ndarray:
         self.__input = inp
@@ -58,8 +58,9 @@ class Convolution(Layer):
         self.__input = None
         self.__kernel_size = kernel_size
         self.__kernels = cp.random.normal(loc=0, scale=cp.sqrt(2 / input_channels),
-                                          size=(kernel_size, kernel_size, input_channels, output_channels))
-        self.__bias = cp.zeros((1, 1, 1, output_channels))
+                                          size=(kernel_size, kernel_size, input_channels, output_channels),
+                                          dtype="float32")
+        self.__bias = cp.zeros((1, 1, 1, output_channels), dtype="float32")
 
     @classmethod
     def correlate(cls, a: cp.ndarray, b: cp.ndarray):
@@ -276,4 +277,3 @@ class DigitModel(Module):
     def optimize(self, gradients, lr):
         for layer in self.__layers[::-1]:
             gradients = layer.backward(gradients, lr)
-
