@@ -54,7 +54,7 @@ def A3(learning_rate, num_iters):
     # Put your task 2 code here.
     b = 1.2
     for i in range(num_iters):
-        gradient = 2 * np.cos(b) * np.sin(b)
+        gradient = -2 * np.cos(b) * np.sin(b)
         b -= learning_rate * gradient
         b_out[i] = b
         f2_out[i] = np.cos(b) ** 2
@@ -73,8 +73,8 @@ def A3(learning_rate, num_iters):
     # (𝑐 + 2𝑑 − 7) ^ 2 + (2𝑐 + 𝑑 − 5) ^ 2
     c, d = 0.5, 2.5
     for i in range(num_iters):
-        gradient_c = 2 * (c + 2 * d - 7) + 2 * (2 * c + d - 5) * 2 
-        gradient_d = 2 * (c + 2 * d - 7) * 2 + (2 * c + d - 5)
+        gradient_c = 2 * (c + 2 * d - 7) + 2 * (2 * c + d - 5) * 2
+        gradient_d = 2 * (c + 2 * d - 7) * 2 + 2 * (2 * c + d - 5)
         c -= learning_rate * gradient_c
         d -= learning_rate * gradient_d
         c_out[i] = c
@@ -83,7 +83,7 @@ def A3(learning_rate, num_iters):
 
     #>>>>>>>>>>>>>>>>>>>>
 
-    print(a_out, b_out, c_out, d_out)
+    print(f1_out, f2_out, f3_out)
     # Return in this order. Do not modify it.
     return a_out, f1_out, b_out, f2_out, c_out, d_out, f3_out 
 
