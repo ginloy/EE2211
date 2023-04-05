@@ -83,7 +83,7 @@ def A3(learning_rate, num_iters):
 
     #>>>>>>>>>>>>>>>>>>>>
 
-    print(f1_out, f2_out, f3_out)
+    # print(f1_out, f2_out, f3_out)
     # Return in this order. Do not modify it.
     return a_out, f1_out, b_out, f2_out, c_out, d_out, f3_out 
 
