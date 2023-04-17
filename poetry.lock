@@ -2020,6 +2020,7 @@ files = [
 [package.dependencies]
 markdown-it-py = ">=2.2.0,<3.0.0"
 pygments = ">=2.13.0,<3.0.0"
+typing-extensions = {version = ">=4.0.0,<5.0", markers = "python_version < \"3.9\""}
 
 [package.extras]
 jupyter = ["ipywidgets (>=7.5.1,<9)"]
@@ -2329,6 +2330,7 @@ files = [
 numpy = ">=1.17.2"
 packaging = "*"
 torch = ">=1.8.1"
+typing-extensions = {version = "*", markers = "python_version < \"3.9\""}
 
 [package.extras]
 all = ["lpips (<=0.1.4)", "nltk (>=3.6)", "pycocotools (>2.0.0)", "pystoi (<=0.3.3)", "regex (>=2021.9.24)", "scipy (>1.0.0)", "torch-fidelity (<=0.3.0)", "torchvision (>=0.8)", "tqdm (>=4.41.0)", "transformers (>=4.10.0)"]
@@ -2743,5 +2745,5 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 
 [metadata]
 lock-version = "2.0"
-python-versions = "^3.9"
-content-hash = "1a1cbf7e17153891ac820e6674dbb0edd83dae1757728fb4ba59ce4224ce329f"
+python-versions = "^3.8"
+content-hash = "9174015d3f410ae350ad0e39df310bd2f68771b9715023a26210b292a7714ca5"
