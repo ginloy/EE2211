@@ -8,6 +8,16 @@ from sklearn.preprocessing import OneHotEncoder, PolynomialFeatures
 
 
 class PolyModel:
+    """
+    An immutable polynomial regression model fitted to the given data
+
+    Parameters:
+       x_train (np.ndarray): The training input
+       y_train (np.ndarray): The training output
+       degree (int): The degree of the polynomial
+       bias (bool): Whether to include a bias term
+       ridge (float): The ridge parameter (if 0, no ridge is used)
+    """
     def __init__(
         self,
         x_train: np.ndarray,
@@ -30,6 +40,15 @@ class PolyModel:
         self.__linear_model.fit(x_prepped, y_train)
 
     def predict(self, x_test: np.ndarray) -> np.ndarray:
+        """
+        Predicts the output for the given input
+
+        Parameters:
+            x_test (np.ndarray): The input to predict the output for
+
+        Returns:
+            np.ndarray: The predicted output
+        """
         if x_test.ndim != self.__x_train.ndim:
             raise ValueError("Test data has different dimensions as training data!")
         if x_test.shape[-1] != self.__x_train.shape[-1]:
@@ -64,6 +83,16 @@ class PolyModel:
 
 
 class ClassificationModel:
+    """
+    An immutable classification model fitted to the given data
+
+    :param x_train: The training input
+    :param y_train: The training labels
+    :param power: The degree of the polynomial
+    :param bias: Whether to include a bias term
+    :param ridge: The ridge parameter (if 0, no ridge is used)
+    """
+
     def __init__(
         self,
         x_train: np.ndarray,
@@ -72,8 +101,8 @@ class ClassificationModel:
         bias: bool = True,
         ridge: float = 0.0,
     ):
-        self.__x_train = x_train
-        self.__y_train = y_train
+        self.x_train = x_train
+        self.y_train = y_train
         self.__encoder = OneHotEncoder(sparse_output=False)
         y_transformed = self.__encoder.fit_transform(y_train)
         self.__poly_model = PolyModel(
