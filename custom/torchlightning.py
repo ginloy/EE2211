@@ -1,9 +1,7 @@
-from typing import Any
-
-import torch
-from torch import nn, optim, Tensor, utils
 import pytorch_lightning as pl
+import torch
 from pytorch_lightning.callbacks.early_stopping import EarlyStopping
+from torch import nn, optim
 
 
 class Network(pl.LightningModule):

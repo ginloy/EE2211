@@ -102,6 +102,7 @@ for i in range(len(groundtruth)):
 scores = [np.round(s, decimals=4) for s in scores]
 print(f"For each output item, you get {scores} scores.")
 overall_score = np.round(sum(scores), decimals=4)
-# Full mark is 16/16
-print(f"In this testing case, you get {overall_score}/16.0 scores.")
+print(
+    f"In this testing case, you get {overall_score}/16.0 scores."
+)  # Full mark is 16/16
 ############################################
