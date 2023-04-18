@@ -1,9 +1,12 @@
+#!/Users/admin/Library/Caches/pypoetry/virtualenvs/ee2211-CV-CWr3R-py3.9/bin/python
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
+import sys
 
-LR = 1
+LR = float(sys.argv[1])
 ITERS = int(2e6)
 
 df = pd.read_csv("government-expenditure-on-education2.csv")
