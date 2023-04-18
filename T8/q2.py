@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import os
 
 LR = 1
 ITERS = int(2e6)
@@ -39,19 +40,27 @@ for epoch in range(ITERS):
     if epoch % int(2e5) == 0:
         print(f"Epoch {epoch}:\tloss = {loss}")
 
+cwd = os.path.curdir
+dir = f"{cwd}/Figures"
+if not os.path.isdir(dir):
+    os.mkdir(dir)
+
 cost = np.array(cost)
 plt.plot(iter, cost)
+plt.title(f"Learning Rate = {LR}")
 plt.xlabel("Iteration")
 plt.ylabel("Cost")
-plt.show()
+plt.savefig(f"{dir}/cost_lr_{LR}.png")
+plt.clf()
 
 y_pred = np.exp(-(x_test @ weights))
 pred_expenditure = y_pred * max_expenditure
 
 plt.plot(test_years, pred_expenditure)
 plt.scatter(df.year, df.total_expenditure_on_education)
+plt.title(f"Learning Rate = {LR}")
 plt.xlabel("Year")
 plt.ylabel("Expenditure")
-plt.show()
+plt.savefig(f"{dir}/pred_lr_{LR}.png")
 
 # print(weights, bias)
