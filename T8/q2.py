@@ -1,4 +1,4 @@
-#!/Users/admin/Library/Caches/pypoetry/virtualenvs/ee2211-CV-CWr3R-py3.9/bin/python
+#!/usr/bin/env python3
 
 import matplotlib.pyplot as plt
 import numpy as np
