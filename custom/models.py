@@ -103,7 +103,7 @@ class ClassificationModel:
     ):
         self.x_train = x_train
         self.y_train = y_train
-        self.__encoder = OneHotEncoder(sparse_output=False)
+        self.__encoder = OneHotEncoder(sparse=False)
         y_transformed = self.__encoder.fit_transform(y_train)
         self.__poly_model = PolyModel(
             x_train, y_transformed, power, bias=bias, ridge=ridge
@@ -139,4 +139,4 @@ class ClassificationModel:
 
     @classmethod
     def one_hot_encode(cls, y: np.ndarray) -> np.ndarray:
-        return OneHotEncoder(sparse_output=False).fit_transform(y)
+        return OneHotEncoder(sparse=False).fit_transform(y)
