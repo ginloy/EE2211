@@ -3,12 +3,19 @@
     <JavaCodeStyleSettings>
       <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="100" />
       <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="100" />
+      <option name="PACKAGES_TO_USE_IMPORT_ON_DEMAND">
+        <value />
+      </option>
       <option name="IMPORT_LAYOUT_TABLE">
         <value>
           <package name="" withSubpackages="true" static="true" />
           <emptyLine />
           <package name="java" withSubpackages="true" static="false" />
           <package name="javax" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="org" withSubpackages="true" static="false" />
+          <emptyLine />
+          <package name="com" withSubpackages="true" static="false" />
           <emptyLine />
           <package name="" withSubpackages="true" static="false" />
         </value>
@@ -21,6 +28,7 @@
     </ScalaCodeStyleSettings>
     <codeStyleSettings language="JAVA">
       <option name="INDENT_CASE_FROM_SWITCH" value="false" />
+      <option name="ALIGN_MULTILINE_THROWS_LIST" value="true" />
       <option name="ALIGN_MULTILINE_ARRAY_INITIALIZER_EXPRESSION" value="true" />
       <option name="CALL_PARAMETERS_WRAP" value="1" />
       <option name="METHOD_PARAMETERS_WRAP" value="1" />
@@ -30,6 +38,7 @@
       <option name="THROWS_KEYWORD_WRAP" value="1" />
       <option name="METHOD_CALL_CHAIN_WRAP" value="1" />
       <option name="BINARY_OPERATION_WRAP" value="1" />
+      <option name="BINARY_OPERATION_SIGN_ON_NEXT_LINE" value="true" />
       <option name="TERNARY_OPERATION_WRAP" value="1" />
       <option name="IF_BRACE_FORCE" value="3" />
       <option name="DOWHILE_BRACE_FORCE" value="3" />
