@@ -16,6 +16,7 @@ classifier.fit(x_train, y_train)
 
 print(classifier.score(x_train, y_train))
 print(classifier.score(x_test, y_test))
+print(classifier.predict(x_test))
 
 plot_tree(classifier, filled=True)
-plt.savefig(f"depth={DEPTH}.png")
+plt.savefig(f"depth={DEPTH}.png", dpi=300)
