@@ -1,6 +1,8 @@
+import numpy as np
 from sklearn.tree import plot_tree
 from matplotlib import pyplot as plt
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 
