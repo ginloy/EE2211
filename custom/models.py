@@ -77,6 +77,10 @@ class PolyModel:
     def transform(self, x: np.ndarray):
         return self.__transformer.transform(x)
 
+    def mse_score(self, x, y):
+        y_pred = self.predict(x)
+        return np.mean((y_pred - y) ** 2)
+
     @classmethod
     def unfitted_transform(cls, x: np.ndarray, power: int, bias=True) -> np.ndarray:
         return PolynomialFeatures(power, include_bias=bias).fit_transform(x)
@@ -112,6 +116,18 @@ class ClassificationModel:
     def predict(self, x_test: np.ndarray) -> np.ndarray:
         raw = self.__poly_model.predict(x_test)
         return self.__encoder.inverse_transform(raw)
+
+    def predict_raw(self, x_test: np.ndarray) -> np.ndarray:
+        return self.__poly_model.predict(x_test)
+
+    def mse_score(self, x, y):
+        y_actual = self.__encoder.transform(y)
+        y_pred = self.predict_raw(x)
+        return np.mean((y_pred - y_actual) ** 2)
+
+    def accuracy_score(self, x, y):
+        y_pred = self.predict(x)
+        return np.mean(y_pred == y)
 
     def coefficients(self) -> np.ndarray:
         return self.__poly_model.coefficients()
