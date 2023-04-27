@@ -1,12 +1,14 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from sklearn.model_selection import train_test_split
-from custom.models import PolyModel, ClassificationModel
-from T10.Qn6 import PolynomialClassifier
-from sklearn.utils.multiclass import unique_labels
-from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.cluster import KMeans
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.utils.multiclass import unique_labels
+
+from custom.models import ClassificationModel, PolyModel
+from T10.Qn6 import PolynomialClassifier
+
 
 def qn3():
     y_pred = np.array([7, 7, 9, 9])
@@ -14,22 +16,28 @@ def qn3():
     mean = np.mean(y_pred)
     variance = np.var(y_pred)
     mse = np.mean((y_pred - y) ** 2)
-    bias_squared = (y - np.mean(y_pred))**2
+    bias_squared = (y - np.mean(y_pred)) ** 2
     noise = mse - bias_squared - variance
     print(mean, variance, mse, bias_squared, noise)
 
+
 # qn3()
+
 
 def qn4():
     w = np.array([1.0, 2.0]).reshape(-1, 1)
     for iter in range(1, 1000):
-        gradient = np.array([w[0, 0] + 0.5 * (w[1, 0]**2), 0.5 * (w[0, 0] ** 2) + w[1, 0] ]).reshape(-1, 1)
+        gradient = np.array(
+            [w[0, 0] + 0.5 * (w[1, 0] ** 2), 0.5 * (w[0, 0] ** 2) + w[1, 0]]
+        ).reshape(-1, 1)
         w -= 0.1 * gradient
-        if (np.max(w) < 1e-10):
+        if np.max(w) < 1e-10:
             print(iter)
             break
 
+
 # qn4()
+
 
 def qn5():
     x = np.array([-2, -2, -1, 0, 1]).reshape(-1, 1)
@@ -40,7 +48,10 @@ def qn5():
         right = data[data[:, 0] >= threshold]
         left_mean = np.mean(left[:, 1])
         right_mean = np.mean(right[:, 1])
-        overall_mse = (np.mean((left[:, 1] - left_mean)**2) + np.mean((right[:, 1] - right_mean) ** 2)) / 2
+        overall_mse = (
+            np.mean((left[:, 1] - left_mean) ** 2)
+            + np.mean((right[:, 1] - right_mean) ** 2)
+        ) / 2
         print(overall_mse)
 
 
@@ -54,13 +65,15 @@ def qn28():
     # labels = np.argmin(distances, axis=0)
     # print(labels)
     marks = np.array([80, 70, 72, 74, 85, 92, 98, 100]).reshape(-1, 1)
-    classifier = KMeans(3,init=np.array([100, 80, 70]).reshape(-1, 1))
+    classifier = KMeans(3, init=np.array([100, 80, 70]).reshape(-1, 1))
     classifier.fit(marks)
     print(classifier.predict(marks))
+
 
 # DecisionTreeClassifier()
 
 # qn28()
+
 
 def qn32():
     total = 0
@@ -77,5 +90,5 @@ def qn32():
                         valid += 1
     print(valid / total)
 
-qn32()
 
+# qn32()
