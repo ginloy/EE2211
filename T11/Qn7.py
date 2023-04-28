@@ -2,8 +2,9 @@ from sklearn.datasets import load_iris
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import pandas as pd
+from typing import Any
 
-data = load_iris()
+data: Any = load_iris()
 x = data.data
 y = data.target
 
